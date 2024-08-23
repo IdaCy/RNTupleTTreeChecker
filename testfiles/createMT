@@ -1,0 +1,91 @@
+#include <TFile.h>
+#include <TTree.h>
+#include <vector>
+#include <iostream>
+#include <chrono>
+
+void createMT(const char* ttreeFile) {
+
+    // Time the TTree creation
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Create a new ROOT file for storing the TTrees
+    auto* file = new TFile(ttreeFile, "RECREATE");
+
+    // --- Creation of normal (non-vector) TTrees ---
+
+    for (int index = 0; index < 5; ++index) {
+        // Name each TTree uniquely based on its index
+        std::string treeName = "tree_" + std::to_string(index);
+        auto* tree = new TTree(treeName.c_str(), ("Tree " + std::to_string(index)).c_str());
+
+        // Variables to be stored in the TTree branches
+        int value = 0;
+        float weight = 0.0;
+        double energy = 0.0;
+        bool isNew = false;
+
+        // Create branches in the TTree for each variable
+        tree->Branch("value", &value, "value/I");
+        tree->Branch("weight", &weight, "weight/F");
+        tree->Branch("energy", &energy, "energy/D");
+        tree->Branch("isNew", &isNew, "isNew/O");
+
+        // Fill the TTree with 10 entries
+        for (int i = 0; i < 10; i++) {
+            value = i;
+            weight = i * 0.1f;
+            energy = i * 1.5;
+            isNew = (i % 2 == 0);  // Boolean based on whether index is even
+
+            // Fill the current entry into the TTree
+            tree->Fill();
+        }
+
+        // Write the TTree to the file
+        tree->Write();
+    }
+
+    // --- Creation of vector TTrees ---
+
+    for (int index = 0; index < 5; ++index) {
+        // Name each vector TTree uniquely based on its index
+        std::string treeName = "tree_vec_" + std::to_string(index);
+        auto* tree = new TTree(treeName.c_str(), ("Tree " + std::to_string(index)).c_str());
+
+        // Vectors to be stored in the TTree branches
+        std::vector<int> values;
+        std::vector<float> weights;
+        std::vector<double> energies;
+        std::vector<bool> newFlags;
+
+        // Create branches in the TTree for each vector variable
+        tree->Branch("value", &values);
+        tree->Branch("weight", &weights);
+        tree->Branch("energy", &energies);
+        tree->Branch("isNew", &newFlags);
+
+        // Fill the vector TTree with 10 entries
+        for (int i = 0; i < 10; ++i) {
+            // Assign vectors to each variable for the current entry
+            values = { i, i + 1, i + 2 };
+            weights = { i * 0.1f, i * 0.1f + 1, i * 0.1f + 2 };
+            energies = { i * 1.5, i * 1.5 + 1, i * 1.5 + 2 };
+            newFlags = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+
+            // Fill the current entry into the vector TTree
+            tree->Fill();
+        }
+
+        // Write the vector TTree to the file
+        tree->Write();
+    }
+
+    // Close the file after writing all the TTrees
+    file->Close();
+
+    // End timing the operation and print the elapsed time
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    std::cout << "TTree creation time: " << diff.count() << " seconds" << std::endl;
+}

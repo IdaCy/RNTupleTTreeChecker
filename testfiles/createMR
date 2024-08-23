@@ -1,0 +1,270 @@
+#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleModel.hxx>
+#include <ROOT/RNTupleWriteOptions.hxx>
+#include <ROOT/RNTupleWriter.hxx>
+#include <TFile.h>
+#include <vector>
+#include <chrono>
+#include <iostream>
+#include <chrono>
+
+void createMR(const char* filename) {
+    // Time the RNTuple creation
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Ensure any existing file with the same name is deleted before creating a new one
+    std::remove(filename);
+    auto* file = new TFile(filename, "RECREATE");
+
+    // --- Creation of standard (non-vector) RNTuples ---
+
+    // Loop to create 6 different RNTuple batches, each with different fields or configurations
+    for (int index = 0; index < 6; ++index) {
+        // Each RNTuple is named uniquely based on its index
+        std::string tupleName = "rntuple_" + std::to_string(index);
+
+        // Create a new model for the RNTuple
+        auto model = ROOT::Experimental::RNTupleModel::Create();
+
+        // Batch 0 and 1: RNTuples with int, float, double, and bool fields
+        if (index < 2) {
+            auto fieldValue = model->MakeField<int>("value");
+            auto fieldWeight = model->MakeField<float>("weight");
+            auto fieldEnergy = model->MakeField<double>("energy");
+            auto fieldIsNew = model->MakeField<bool>("isNew");
+
+            // Options for RNTuple writing
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            const auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            // Fill the RNTuple with 10 entries, skipping entry 4 for batch 1 to introduce a difference
+            for (int i = 0; i < 10; ++i) {
+                if (index == 1 && i == 4) continue;
+                *fieldValue = i;
+                *fieldWeight = i * 0.1f;
+                *fieldEnergy = i * 1.5;
+                *fieldIsNew = (i % 2 == 0);
+                writer->Fill();
+            }
+        }
+
+        // Batch 2: RNTuple with int, double, and bool fields (no float)
+        else if (index == 2) {
+            auto fieldValue = model->MakeField<int>("value");
+            auto fieldEnergy = model->MakeField<double>("energy");
+            auto fieldIsNew = model->MakeField<bool>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            const auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                *fieldValue = i;
+                *fieldEnergy = i * 1.5;
+                *fieldIsNew = (i % 2 == 0);
+                writer->Fill();
+            }
+        }
+
+        // Batch 3: RNTuple with int, float, and double fields (with the field 'energy' renamed to 'mass')
+        else if (index == 3) {
+            auto fieldValue = model->MakeField<int>("value");
+            auto fieldWeight = model->MakeField<float>("weight");
+            auto fieldEnergy = model->MakeField<double>("mass");
+            auto fieldIsNew = model->MakeField<bool>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            const auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                *fieldValue = i;
+                *fieldWeight = i * 0.1f;
+                *fieldEnergy = i * 1.5;
+                *fieldIsNew = (i % 2 == 0);
+                writer->Fill();
+            }
+        }
+
+        // Batch 4: RNTuple with a bool field named 'energy' instead of a double, introducing a type difference
+        else if (index == 4) {
+            auto fieldValue = model->MakeField<int>("value");
+            auto fieldWeight = model->MakeField<float>("weight");
+            auto fieldEnergy = model->MakeField<bool>("energy");
+            auto fieldIsNew = model->MakeField<bool>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            const auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                *fieldValue = i;
+                *fieldWeight = i * 0.1f;
+                *fieldEnergy = (i % 2 == 0);  // Field 'energy' now stores a bool
+                *fieldIsNew = (i % 2 == 0);
+                writer->Fill();
+            }
+        }
+
+        // Batch 5: RNTuple with a float field for 'energy' and all other fields the same as batch 0
+        else if (index == 5) {
+            auto fieldValue = model->MakeField<int>("value");
+            auto fieldWeight = model->MakeField<float>("weight");
+            auto fieldEnergy = model->MakeField<float>("energy");
+            auto fieldIsNew = model->MakeField<bool>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            const auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                *fieldValue = i;
+                *fieldWeight = i * 0.1f;
+                *fieldEnergy = i * 0.1f;  // Field 'energy' now stores a float
+                *fieldIsNew = (i % 2 == 0);
+                writer->Fill();
+            }
+        }
+    }
+
+    // --- Creation of vector RNTuples ---
+
+    // Loop to create 6 different RNTuple batches, each with vector fields
+    for (int index = 0; index < 6; ++index) {
+        // Each vector RNTuple is named uniquely based on its index
+        std::string tupleName = "rntuple_vec_" + std::to_string(index);
+
+        // Create a new model for the vector RNTuple
+        auto model = ROOT::Experimental::RNTupleModel::Create();
+
+        // Vector Batch 0 and 1: RNTuples with vector fields of int, float, double, and bool
+        if (index < 2) {
+            auto fieldValue = model->MakeField<std::vector<int>>("value");
+            auto fieldWeight = model->MakeField<std::vector<float>>("weight");
+            auto fieldEnergy = model->MakeField<std::vector<double>>("energy");
+            auto fieldIsNew = model->MakeField<std::vector<bool>>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            // Fill the RNTuple with 10 entries, skipping entry 4 for batch 1 to introduce a difference
+            for (int i = 0; i < 10; ++i) {
+                if (index == 1 && i == 4) continue;  // Skip entry 4 for batch 1 to create a difference
+                std::vector<int> valueVec = { i, i + 1, i + 2 };
+                std::vector<float> weightVec = { i * 0.1f, i * 0.1f + 1, i * 0.1f + 2 };
+                std::vector<double> energyVec = { i * 1.5, i * 1.5 + 1, i * 1.5 + 2 };
+                std::vector<bool> isNewVec = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+
+                *fieldValue = valueVec;
+                *fieldWeight = weightVec;
+                *fieldEnergy = energyVec;
+                *fieldIsNew = isNewVec;
+
+                writer->Fill();
+            }
+        }
+
+        // Vector Batch 2: RNTuple with vector fields of int, double, and bool (no float)
+        if (index == 2) {
+            auto fieldValue = model->MakeField<std::vector<int>>("value");
+            auto fieldEnergy = model->MakeField<std::vector<double>>("energy");
+            auto fieldIsNew = model->MakeField<std::vector<bool>>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                std::vector<int> valueVec = { i, i + 1, i + 2 };
+                std::vector<double> energyVec = { i * 1.5, i * 1.5 + 1, i * 1.5 + 2 };
+                std::vector<bool> isNewVec = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+
+                *fieldValue = valueVec;
+                *fieldEnergy = energyVec;
+                *fieldIsNew = isNewVec;
+
+                writer->Fill();
+            }
+        }
+
+        // Vector Batch 3: RNTuple with vector fields and the field 'energy' renamed to 'mass'
+        if (index == 3) {
+            auto fieldValue = model->MakeField<std::vector<int>>("value");
+            auto fieldWeight = model->MakeField<std::vector<float>>("weight");
+            auto fieldEnergy = model->MakeField<std::vector<double>>("mass");
+            auto fieldIsNew = model->MakeField<std::vector<bool>>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                std::vector<int> valueVec = { i, i + 1, i + 2 };
+                std::vector<float> weightVec = { i * 0.1f, i * 0.1f + 1, i * 0.1f + 2 };
+                std::vector<double> energyVec = { i * 1.5, i * 1.5 + 1, i * 1.5 + 2 };
+                std::vector<bool> isNewVec = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+
+                *fieldValue = valueVec;
+                *fieldWeight = weightVec;
+                *fieldEnergy = energyVec;
+                *fieldIsNew = isNewVec;
+
+                writer->Fill();
+            }
+        }
+
+        // Vector Batch 4: RNTuple with a vector<bool> field named 'energy' instead of a vector<double>
+        if (index == 4) {
+            auto fieldValue = model->MakeField<std::vector<int>>("value");
+            auto fieldWeight = model->MakeField<std::vector<float>>("weight");
+            auto fieldEnergy = model->MakeField<std::vector<bool>>("energy");
+            auto fieldIsNew = model->MakeField<std::vector<bool>>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                std::vector<int> valueVec = { i, i + 1, i + 2 };
+                std::vector<float> weightVec = { i * 0.1f, i * 0.1f + 1, i * 0.1f + 2 };
+                std::vector<bool> energyVec = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+                std::vector<bool> isNewVec = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+
+                *fieldValue = valueVec;
+                *fieldWeight = weightVec;
+                *fieldEnergy = energyVec;
+                *fieldIsNew = isNewVec;
+
+                writer->Fill();
+            }
+        }
+
+        // Vector Batch 5: RNTuple with vector fields and the field 'weight' changed to vector<double>
+        if (index == 5) {
+            auto fieldValue = model->MakeField<std::vector<int>>("value");
+            auto fieldWeight = model->MakeField<std::vector<double>>("weight");
+            auto fieldEnergy = model->MakeField<std::vector<double>>("energy");
+            auto fieldIsNew = model->MakeField<std::vector<bool>>("isNew");
+
+            const auto* options = new ROOT::Experimental::RNTupleWriteOptions();
+            auto writer = ROOT::Experimental::RNTupleWriter::Append(std::move(model), tupleName, *file, *options);
+
+            for (int i = 0; i < 10; ++i) {
+                std::vector<int> valueVec = { i, i + 1, i + 2 };
+                std::vector<double> weightVec = { i * 0.1, i * 0.1 + 1, i * 0.1 + 2 };
+                std::vector<double> energyVec = { i * 0.1, i * 0.1 + 1, i * 0.1 + 2 };
+                std::vector<bool> isNewVec = { i % 2 == 0, i % 2 == 0, i % 2 == 0 };
+
+                *fieldValue = valueVec;
+                *fieldWeight = weightVec;
+                *fieldEnergy = energyVec;
+                *fieldIsNew = isNewVec;
+
+                writer->Fill();
+            }
+        }
+    }
+
+    // Write the file to disk and close it
+    file->Write();
+    file->Close();
+    delete file;
+
+    // End timing the operation
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    std::cout << "RNTuple creation time: " << diff.count() << " seconds" << std::endl;
+}
