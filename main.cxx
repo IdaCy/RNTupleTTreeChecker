@@ -20,18 +20,21 @@
 using namespace Checker;
 
 int main(int argc, char *argv[]) {
-    //gErrorIgnoreLevel = kWarning;
     gErrorIgnoreLevel = kError;
 
+    // Check if the number of arguments is less than 9; if true, print usage instructions and exit
     if (argc < 9) {
         std::cerr << "Usage: " << argv[0] << " -t <ttreeFile> -r <rntupleFile> -tn <ttreeName> -rn <rntupleName>\n";
         exit(1);
     }
 
+    // Create a configuration object to store command-line arguments
     CheckerConfig config;
-    bool verbose = false;
+    bool verbose = false; // Initialize a flag to check if verbose mode should be enabled
+
+    // Loop through the command-line arguments to parse options and their values
     for (int i = 1; i < argc; i += 2) {
-        std::string arg = argv[i];
+        std::string arg = argv[i]; // Store the current argument in a string
         if (arg == "-t") {
             config.fTTreeFile = argv[i + 1];
         }
@@ -45,7 +48,7 @@ int main(int argc, char *argv[]) {
             config.fRNTupleName = argv[i + 1];
         }
         else if (arg == "-v") {
-            verbose = true;  // ENABLE verbosity if '-v' is passed
+            verbose = true;  // Enable verbosity if '-v' is passed
         }
         else {
             std::cerr << "Unknown option: " << arg << std::endl;
@@ -53,12 +56,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Set the flag to indicate the comparison should run
     config.fShouldRun = true;
 
+    CheckerCLI cli;            // Create a CLI object to handle user interaction and output
+    cli.SetVerbosity(verbose); // Set verbosity in the CLI object based on the command-line option
+    cli.RunAll(config);        // Run the main comparison logic using the configured options
 
-    CheckerCLI cli;
-    cli.SetVerbosity(verbose);
-    cli.RunAll(config);
-
-    return 0;
+    return 0;  // Exit the program successfully
 }
